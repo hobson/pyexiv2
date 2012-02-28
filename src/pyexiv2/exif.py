@@ -33,6 +33,7 @@ import libexiv2python
 from pyexiv2.utils import is_fraction, make_fraction, fraction_to_string, \
                           NotifyingList, ListenerInterface, \
                           undefined_to_string, string_to_undefined, \
+                          latin_to_ascii, escape_unprintable, \
                           DateTimeFormatter
 
 import time
@@ -334,7 +335,7 @@ class ExifTag(ListenerInterface):
             # There is currently no charset conversion.
             # TODO: guess the encoding and decode accordingly into unicode
             # where relevant.
-            return undefined_to_string(value)
+            return escape_unprintable(undefined_to_string(latin_to_ascii(value)))
 
         raise ExifValueError(value, self.type)
 

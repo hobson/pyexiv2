@@ -133,6 +133,30 @@ class FixedOffset(datetime.tzinfo):
         return (self.sign == other.sign) and (self.hours == other.hours) and \
             (self.minutes == other.minutes)
 
+def latin_to_ascii(s):
+    s2=''
+    for c in s:
+        if ord(c) < 128:
+            s2 += c
+        else:
+            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
+    return s2
+
+PRINTABLE = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\x0b\x0c'
+def escape_unprintable(s):
+    s2=''
+    for c in s:
+        if ord(c) < 128 and c in PRINTABLE:
+            s2 += c
+        else:
+            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
+    return s2
+
+def tryint(s):
+    try:
+        return int(s)
+    except ValueError:
+        return False # return 0
 
 def undefined_to_string(undefined):
     """
@@ -148,17 +172,7 @@ def undefined_to_string(undefined):
     :return: the corresponding decoded string
     :rtype: string
     """
-    try:
-        return undefined.decode('utf-8')
-    except UnicodeError:
-        l = undefined.rstrip().split(' ')
-        s = ''
-        for num in l:
-            try:
-                s += chr(int(num))
-            except ValueError:
-                s += '<ValueError in pyexiv2>'
-        return s
+    return ''.join(map(lambda x: chr(tryint(x)), undefined.strip().split(' ')))
 
 def string_to_undefined(sequence):
     """
