@@ -1,3 +1,5 @@
 .sconsign.dblite
 build
 doc/_build/*
+malformed_exif_examples
+malformed_makernote_bug.patch

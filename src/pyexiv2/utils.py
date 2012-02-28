@@ -28,6 +28,9 @@
 Utilitary classes and functions.
 """
 
+# Enable true division.
+from __future__ import division
+
 import datetime
 import re
 
@@ -145,8 +148,17 @@ def undefined_to_string(undefined):
     :return: the corresponding decoded string
     :rtype: string
     """
-    return ''.join(map(lambda x: chr(int(x)), undefined.rstrip().split(' ')))
-
+    try:
+        return undefined.decode('utf-8')
+    except UnicodeError:
+        l = undefined.rstrip().split(' ')
+        s = ''
+        for num in l:
+            try:
+                s += chr(int(num))
+            except ValueError:
+                s += '<ValueError in pyexiv2>'
+        return s
 
 def string_to_undefined(sequence):
     """
@@ -601,7 +613,10 @@ class DateTimeFormatter(object):
                  ``±%H:%M``
         :rtype: string
         """
-        seconds = t.total_seconds()
+        # timedelta.total_seconds() is only available starting with Python 2.7
+        # (http://docs.python.org/library/datetime.html#datetime.timedelta.total_seconds)
+        #seconds = t.total_seconds()
+        seconds = (t.microseconds + (t.seconds + t.days * 24 * 3600) * 10**6) / 10**6
         hours = int(seconds / 3600)
         minutes = abs(int((seconds - hours * 3600) / 60))
         return '%+03d:%02d' % (hours, minutes)

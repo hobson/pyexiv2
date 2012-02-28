@@ -286,6 +286,10 @@ class ExifTag(ListenerInterface):
             # There is currently no charset conversion.
             # TODO: guess the encoding and decode accordingly into unicode
             # where relevant.
+            try:
+                return value.decode('utf-8')
+            except UnicodeError:
+                return value
             return value
 
         elif self.type in ('Byte', 'SByte'):
