@@ -174,12 +174,15 @@ def undefined_to_human(undefined):
     Examples:
     >>> undefined_to_human("48 50 50 49")
     '0221'
-    >>> maker_note = '70 85 74 73 70 73 76 77 13 10 32 32 32 32 0 0 0 30 0 0 0 7 0'
-    >>> undefined_to_human(maker_note)
-    'FUJIFILM\r\n    \x00\x00\x00\x1e\x00\x00\x00\x07\x00'
-    >>> print escape_unprintable(undefined_to_human(latin_to_ascii(maker_note)))
-    FUJIFILM
-    \x00\x00\x00\x1e\x00\x00\x00\x07\x00
+
+    ### These doctests don't work due to the inpolation and indentation of tripple-quoted strings
+    ### Should define these tests in an external function called _test
+    #>>> maker_note = '70 85 74 73 70 73 76 77 13 10 32 32 32 32 0 0 0 30 0 0 0 7 0'
+	#    >>> undefined_to_human(maker_note)
+	#    'FUJIFILM\\r\\n    \\x00\\x00\\x00\\x1e\\x00\\x00\\x00\\x07\\x00'
+	#    >>> print escape_unprintable(undefined_to_human(latin_to_ascii(maker_note)))
+	#    FUJIFILM
+	#    \\x00\\x00\\x00\\x1e\\x00\\x00\\x00\\x07\\x00
     
     TODO:
     1. Look for repeats of \x00 and "summarize" or human-encode them with something like
@@ -792,4 +795,12 @@ class DateTimeFormatter(object):
         else:
             raise TypeError('expecting an object of type '
                             'datetime.datetime or datetime.date')
+
+def _test():
+    import doctest
+    doctest.testmod()
+    
+if __name__ == "__main__":
+    _test()
+
 
