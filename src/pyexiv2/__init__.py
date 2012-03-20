@@ -70,7 +70,7 @@ from pyexiv2.xmp import XmpValueError, XmpTag, register_namespace, \
 from pyexiv2.preview import Preview
 from pyexiv2.utils import FixedOffset, Rational, NotifyingList, \
                           undefined_to_string, string_to_undefined, \
-                          undefined_to_human, \
+                          undefined_to_human, escape_unprintable, latin_to_ascii,\
                           GPSCoordinate
 
 
@@ -89,4 +89,13 @@ exiv2_version_info = libexiv2python.exiv2_version_info
 
 #: The version of libexiv2 as a string (major.minor.micro).
 __exiv2_version__ = _make_version(exiv2_version_info)
+
+__test__= {'undefined_to_human':undefined_to_human}
+
+def _test():
+    import doctest
+    doctest.testmod(verbose=True)
+    
+if __name__ == "__main__":
+    _test()
 

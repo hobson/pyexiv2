@@ -563,3 +563,10 @@ class ExifThumbnail(object):
                     doc='The raw thumbnail data. Setting it is restricted to ' +
                         'a buffer in the JPEG format.')
 
+def _test():
+    import doctest
+    doctest.testmod(verbose=True)
+    
+if __name__ == "__main__":
+    _test()
+
