@@ -32,7 +32,8 @@ import libexiv2python
 
 from pyexiv2.utils import is_fraction, make_fraction, fraction_to_string, \
                           NotifyingList, ListenerInterface, \
-                          undefined_to_string, string_to_undefined, \
+                          undefined_to_human, string_to_undefined, \
+                          latin_to_ascii, escape_unprintable, \
                           DateTimeFormatter
 
 import time
@@ -286,6 +287,10 @@ class ExifTag(ListenerInterface):
             # There is currently no charset conversion.
             # TODO: guess the encoding and decode accordingly into unicode
             # where relevant.
+            try:
+                return value.decode('utf-8')
+            except UnicodeError:
+                return value
             return value
 
         elif self.type in ('Byte', 'SByte'):
@@ -330,7 +335,7 @@ class ExifTag(ListenerInterface):
             # There is currently no charset conversion.
             # TODO: guess the encoding and decode accordingly into unicode
             # where relevant.
-            return undefined_to_string(value)
+            return undefined_to_human(value)
 
         raise ExifValueError(value, self.type)
 
@@ -374,7 +379,10 @@ class ExifTag(ListenerInterface):
             elif isinstance(value, str):
                 return value
             else:
-                raise ExifValueError(value, self.type)
+                try:
+                    return(str(value))
+                except:
+                    raise ExifValueError(value, self.type)
 
         elif self.type == 'Comment':
             if value is not None and self.raw_value is not None and \
@@ -429,13 +437,19 @@ class ExifTag(ListenerInterface):
             if is_fraction(value) and value.numerator >= 0:
                 return fraction_to_string(value)
             else:
-                raise ExifValueError(value, self.type)
+                try:
+                    return(str(value))
+                except:
+                    raise ExifValueError(value, self.type)
 
         elif self.type == 'SRational':
             if is_fraction(value):
                 return fraction_to_string(value)
             else:
-                raise ExifValueError(value, self.type)
+                try:
+                    return(str(value))
+                except:
+                    raise ExifValueError(value, self.type)
 
         elif self.type == 'Undefined':
             if isinstance(value, unicode):

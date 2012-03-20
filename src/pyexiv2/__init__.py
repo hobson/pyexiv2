@@ -67,6 +67,7 @@ from pyexiv2.xmp import XmpValueError, XmpTag, register_namespace, \
 from pyexiv2.preview import Preview
 from pyexiv2.utils import FixedOffset, Rational, NotifyingList, \
                           undefined_to_string, string_to_undefined, \
+                          undefined_to_human, \
                           GPSCoordinate
 
 

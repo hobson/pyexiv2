@@ -21,6 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA.
 #
 # Author: Olivier Tilloy <olivier@tilloy.net>
+# Contributors: Hobson Lane <hobson@totalgood.com>
 #
 # ******************************************************************************
 
@@ -133,6 +134,61 @@ class FixedOffset(datetime.tzinfo):
         return (self.sign == other.sign) and (self.hours == other.hours) and \
             (self.minutes == other.minutes)
 
+def latin_to_ascii(s):
+    s2=''
+    for c in s:
+        if ord(c) < 128:
+            s2 += c
+        else:
+            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
+    return s2
+
+# from string.printable
+PRINTABLE = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\x0b\x0c'
+def escape_unprintable(s):
+    s2=''
+    for c in s:
+        if ord(c) < 128 and c in PRINTABLE:
+            s2 += c
+        else:
+            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
+    return s2
+
+def try_int(s):
+    try:
+        return int(s)
+    except ValueError:
+        return False # return 0
+
+def undefined_to_human(undefined):
+    """
+    Convert an exif.Undefined type string to a human-readable string.
+    
+    The "Undefined" string of space-delimitted decimal integers is converted to 
+    ASCII characters and backslash-escaped hex codes for humans.
+    The undefined string must contain space-delimmetted decimal numbers,
+    e.g. "48 50 50 49" becomes "0221".
+    
+    The Undefined type is part of the EXIF specification.
+    
+    Examples:
+    >>> undefined_to_human("48 50 50 49")
+    '0221'
+    >>> maker_note = '70 85 74 73 70 73 76 77 13 10 32 32 32 32 0 0 0 30 0 0 0 7 0'
+    >>> undefined_to_human(maker_note)
+    'FUJIFILM\r\n    \x00\x00\x00\x1e\x00\x00\x00\x07\x00'
+    >>> print escape_unprintable(undefined_to_human(latin_to_ascii(maker_note)))
+    FUJIFILM
+    \x00\x00\x00\x1e\x00\x00\x00\x07\x00
+    
+    :param undefined: an exif Undefined string
+    :type undefined: string
+    :return: decoded (human-readable) python string
+    :rtype: string
+    """
+    if undefined == '':
+        return ''
+    return escape_unprintable(undefined_to_string(latin_to_ascii(undefined)))
 
 def undefined_to_string(undefined):
     """
@@ -151,7 +207,6 @@ def undefined_to_string(undefined):
     if undefined == '':
         return ''
     return ''.join(map(lambda x: chr(int(x)), undefined.rstrip().split(' ')))
-
 
 def string_to_undefined(sequence):
     """
