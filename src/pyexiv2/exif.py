@@ -2,7 +2,7 @@
 
 # ******************************************************************************
 #
-# Copyright (C) 2006-2011 Olivier Tilloy <olivier@tilloy.net>
+# Copyright (C) 2006-2012 Olivier Tilloy <olivier@tilloy.net>
 #
 # This file is part of the pyexiv2 distribution.
 #
@@ -21,6 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA.
 #
 # Author: Olivier Tilloy <olivier@tilloy.net>
+# Contributors: Hobson Lane <hobson@totalgood.com>
 #
 # ******************************************************************************
 

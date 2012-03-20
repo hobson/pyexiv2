@@ -2,7 +2,7 @@
 
 # ******************************************************************************
 #
-# Copyright (C) 2006-2011 Olivier Tilloy <olivier@tilloy.net>
+# Copyright (C) 2006-2012 Olivier Tilloy <olivier@tilloy.net>
 #
 # This file is part of the pyexiv2 distribution.
 #
@@ -21,6 +21,7 @@
 # Foundation, Inc., 51 Franklin Street, 5th Floor, Boston, MA 02110-1301 USA.
 #
 # Author: Olivier Tilloy <olivier@tilloy.net>
+# Contributors: Hobson Lane <hobson@totalgood.com>
 #
 # ******************************************************************************
 
@@ -41,19 +42,21 @@ C++ library Exiv2, libexiv2python.
 
 A typical use of this binding would be:
 
->>> import pyexiv2
->>> metadata = pyexiv2.ImageMetadata('test/smiley.jpg')
+>>> import pyexiv2, os.path
+>>> metadata = pyexiv2.ImageMetadata(os.path.join(os.path.realpath(pyexiv2.__path__[0]),'..','..','test','data','smiley1.jpg'))
 >>> metadata.read()
 >>> print metadata.exif_keys
-['Exif.Image.ImageDescription', 'Exif.Image.XResolution',
- 'Exif.Image.YResolution', 'Exif.Image.ResolutionUnit', 'Exif.Image.Software',
- 'Exif.Image.DateTime', 'Exif.Image.Artist', 'Exif.Image.Copyright',
- 'Exif.Image.ExifTag', 'Exif.Photo.Flash', 'Exif.Photo.PixelXDimension',
- 'Exif.Photo.PixelYDimension']
->>> print metadata['Exif.Image.DateTime'].value
-2004-07-13 21:23:44
+['Exif.Image.ImageDescription', 'Exif.Image.XResolution', 'Exif.Image.YResolution', 'Exif.Image.ResolutionUnit', 'Exif.Image.Software', 'Exif.Image.DateTime', 'Exif.Image.Artist', 'Exif.Image.Copyright', 'Exif.Image.ExifTag', 'Exif.Photo.Flash', 'Exif.Photo.PixelXDimension', 'Exif.Photo.PixelYDimension']
+>>> ## BAD IDEA, because Image.DateTime is modifed in subsequent tests!
+>>> # print metadata['Exif.Image.DateTime'].value
+>>> # 2004-07-13 21:23:44
+>>> ## BAD IDEA, because it's modifed in subsequent tests!
+>>> # print metadata['Exif.Image.DateTime'].value
+>>> # 2004-07-13 21:23:44
+>>> print metadata['Exif.Image.XResolution'].value
+72
 >>> import datetime
->>> metadata['Exif.Image.DateTime'].value = datetime.datetime.today()
+>>> metadata['Exif.Image.DateTime'].value = datetime.datetime.today() # Can no longer verify this tag in the doctest above!!!
 >>> metadata.write()
 """
 

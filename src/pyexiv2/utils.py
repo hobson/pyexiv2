@@ -26,7 +26,7 @@
 # ******************************************************************************
 
 """
-Utilitary classes and functions.
+Utility classes and functions.
 """
 
 # Enable true division.
@@ -181,6 +181,9 @@ def undefined_to_human(undefined):
     FUJIFILM
     \x00\x00\x00\x1e\x00\x00\x00\x07\x00
     
+    TODO:
+    1. Look for repeats of \x00 and "summarize" or human-encode them with something like
+       '\x00(repeated {0} times)'.format(undefined.count('\x00'))
     :param undefined: an exif Undefined string
     :type undefined: string
     :return: decoded (human-readable) python string
