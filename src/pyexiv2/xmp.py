@@ -93,6 +93,7 @@ class XmpTag(object):
     _time_zone_re = r'Z|((?P<sign>\+|-)(?P<ohours>\d{2}):(?P<ominutes>\d{2}))'
     _time_re = r'(?P<hours>\d{2})(:(?P<minutes>\d{2})(:(?P<seconds>\d{2})(.(?P<decimal>\d+))?)?(?P<tzd>%s))?' % _time_zone_re
     _date_re = re.compile(r'(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2})(T(?P<time>%s))?)?)?' % _time_re)
+    _xmp_type_re =  re.compile(r'(?:closed|open)?\s?choice(?:of)?\s(?P<type>\w+)', re.IGNORECASE)
     # permissive and robust dimension parser
     #_flash_re = re.compile(r'(?:Fired:)?(?=<Fired>\d+)', flags=re.IGNORECASE) 
 
@@ -187,10 +188,18 @@ class XmpTag(object):
 
     def _compute_value(self):
         # Lazy computation of the value from the raw value
-        if self.type.startswith(('seq', 'bag', 'alt')):
-            type = self.type[4:]
-            if type.lower().startswith('closed choice of'):
-                type = type[17:]
+        mo = self._xmp_type_re.match(self.type)
+        if mo:
+            gd = mo.groupdict()
+        if mo and gd and gd['type']:
+            type = gd['type']
+        elif self.type.startswith(('seq', 'bag', 'alt')):
+            type = self.type[4:] # TODO _xmp_type_re could incorporate this as well
+            mo = self._xmp_type_re.match(type)
+            if mo:
+                gd = mo.groupdict()
+            if mo and gd and gd['type']:
+                type = gd['type']
             self._value = map(lambda x: self._convert_to_python(x, type), self._raw_value)
         elif self.type == 'Lang Alt':
             self._value = {}
@@ -199,10 +208,6 @@ class XmpTag(object):
                     self._value[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
                 except TypeError:
                     raise XmpValueError(self._raw_value, type)
-        elif self.type.lower().startswith('closed choice of'):
-            self._value = self._convert_to_python(self._raw_value, self.type[17:])
-        elif self.type == '':
-            self._value = self._raw_value
         else:
             self._value = self._convert_to_python(self._raw_value, self.type)
 
@@ -216,16 +221,22 @@ class XmpTag(object):
     def _set_value(self, value):
         type = self._tag._getExiv2Type()
         if type == 'XmpText':
-            stype = self.type
-            if stype.lower().startswith('closed choice of'):
-                stype = stype[17:]
-            self.raw_value = self._convert_to_string(value, stype)
+            #stype = self.type # why create a new variable?
+            mo = self._xmp_type_re.match(type)
+            if mo:
+                gd = mo.groupdict()
+            if mo and gd and gd['type']:
+                type = gd['type']
+            self.raw_value = self._convert_to_string(value, type)
         elif type in ('XmpAlt', 'XmpBag', 'XmpSeq'):
             if not isinstance(value, (list, tuple)):
                 raise TypeError('Expecting a list of values')
             stype = self.type[4:]
-            if stype.lower().startswith('closed choice of'):
-                stype = stype[17:]
+            mo = self._xmp_type_re.match(stype)
+            if mo:
+                gd = mo.groupdict()
+            if mo and gd and gd['type']:
+                stype = gd['type']
             self.raw_value = map(lambda x: self._convert_to_string(x, stype), value)
         elif type == 'LangAlt':
             if isinstance(value, basestring):
@@ -332,7 +343,7 @@ class XmpTag(object):
         # XMP Spec: "exif:Flash Flash Internal EXIF tag 37385, 0x9209. Strobe light (flash) source data.
         elif type == 'Flash':
             try:
-                return Flash.from_string(value) #still causes a value error
+                return Flash(value) #still causes a value error
             except ValueError:
                 try:
                     return str(value) # why does this cause Attribute error claiming that Flash type objects have no from_string attribute
