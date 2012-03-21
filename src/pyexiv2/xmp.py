@@ -137,6 +137,17 @@ class XmpTag(object):
         tag._value_cookie = True
         return tag
 
+    @staticmethod
+    def _choice_type(s):
+        print '!!!!!!!!!!'
+        print s
+        mo = self._xmp_type_re.match(s)
+        print mo
+        if mo:
+            gd = mo.groupdict()
+            if gd and gd['type']:
+                return gd['type']
+        return s
     @property
     def key(self):
         """The key of the tag in the dotted form
@@ -178,7 +189,7 @@ class XmpTag(object):
             if not value:
                 raise ValueError('Empty LangAlt')
             self._tag._setLangAltValue(value)
-
+        # what about setting 'type'?
         self._raw_value = value
         self._value_cookie = True
 
@@ -200,23 +211,12 @@ class XmpTag(object):
                     raise XmpValueError(self._raw_value, self.type) # FIXME: type is not yet defined!!!
         else:
             self._value = self._convert_to_python(self._raw_value, self.type)
-
         self._value_cookie = False
 
     def _get_value(self):
         if self._value_cookie:
             self._compute_value()
         return self._value
-
-    # TODO: use this everywhere needed instead of hard-coding
-    @staticmethod
-    def _choice_type(s):
-        mo = self._xmp_type_re.match(s)
-        if mo:
-            gd = mo.groupdict()
-            if gd and gd['type']:
-                return gd['type']
-        return s
 
     def _set_value(self, value):
         type = self._tag._getExiv2Type()
