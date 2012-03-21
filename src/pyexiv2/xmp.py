@@ -188,7 +188,6 @@ class XmpTag(object):
 
     def _compute_value(self):
         # Lazy computation of the value from the raw value
-        self.type = _choice_type(self.type)
         if self.type.startswith(('seq', 'bag', 'alt')):
             type = _choice_type(self.type[4:]) # TODO _xmp_type_re (choice_type) could incorporate this as well
             self._value = map(lambda x: self._convert_to_python(x, type), self._raw_value)
@@ -198,7 +197,7 @@ class XmpTag(object):
                 try:
                     self._value[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
                 except TypeError:
-                    raise XmpValueError(self._raw_value, type)
+                    raise XmpValueError(self._raw_value, self.type) # FIXME: type is not yet defined!!!
         else:
             self._value = self._convert_to_python(self._raw_value, self.type)
 
