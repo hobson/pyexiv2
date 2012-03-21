@@ -188,18 +188,9 @@ class XmpTag(object):
 
     def _compute_value(self):
         # Lazy computation of the value from the raw value
-        mo = self._xmp_type_re.match(self.type)
-        if mo:
-            gd = mo.groupdict()
-        if mo and gd and gd['type']:
-            type = gd['type']
-        elif self.type.startswith(('seq', 'bag', 'alt')):
-            type = self.type[4:] # TODO _xmp_type_re could incorporate this as well
-            mo = self._xmp_type_re.match(type)
-            if mo:
-                gd = mo.groupdict()
-            if mo and gd and gd['type']:
-                type = gd['type']
+        self.type = _choice_type(self.type)
+        if self.type.startswith(('seq', 'bag', 'alt')):
+            type = _choice_type(self.type[4:]) # TODO _xmp_type_re (choice_type) could incorporate this as well
             self._value = map(lambda x: self._convert_to_python(x, type), self._raw_value)
         elif self.type == 'Lang Alt':
             self._value = {}
@@ -218,25 +209,25 @@ class XmpTag(object):
             self._compute_value()
         return self._value
 
+    # TODO: use this everywhere needed instead of hard-coding
+    @staticmethod
+    def _choice_type(s):
+        mo = self._xmp_type_re.match(s)
+        if mo:
+            gd = mo.groupdict()
+            if gd and gd['type']:
+                return gd['type']
+        return s
+
     def _set_value(self, value):
         type = self._tag._getExiv2Type()
         if type == 'XmpText':
-            #stype = self.type # why create a new variable?
-            mo = self._xmp_type_re.match(type)
-            if mo:
-                gd = mo.groupdict()
-            if mo and gd and gd['type']:
-                type = gd['type']
-            self.raw_value = self._convert_to_string(value, type)
+            stype = _choice_type(self.type)
+            self.raw_value = self._convert_to_string(value, stype)
         elif type in ('XmpAlt', 'XmpBag', 'XmpSeq'):
             if not isinstance(value, (list, tuple)):
                 raise TypeError('Expecting a list of values')
-            stype = self.type[4:]
-            mo = self._xmp_type_re.match(stype)
-            if mo:
-                gd = mo.groupdict()
-            if mo and gd and gd['type']:
-                stype = gd['type']
+            stype = _choice_type(self.type[4:]) # why create a new variable?
             self.raw_value = map(lambda x: self._convert_to_string(x, stype), value)
         elif type == 'LangAlt':
             if isinstance(value, basestring):
