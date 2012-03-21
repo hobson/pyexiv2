@@ -31,9 +31,12 @@ XMP specific code.
 import libexiv2python
 
 from pyexiv2.utils import FixedOffset, is_fraction, make_fraction, \
-                          GPSCoordinate, DateTimeFormatter
+                          GPSCoordinate, DateTimeFormatter, \
+                          Dimensions, Flash, \
+                          Colorant # not yet utilized here
 
 import datetime
+import dateutil
 import re
 
 
@@ -55,9 +58,7 @@ class XmpValueError(ValueError):
         return 'Invalid value for XMP type [%s]: [%s]' % \
                (self.type, self.value)
 
-
 class XmpTag(object):
-
     """
     An XMP tag.
 
@@ -92,6 +93,8 @@ class XmpTag(object):
     _time_zone_re = r'Z|((?P<sign>\+|-)(?P<ohours>\d{2}):(?P<ominutes>\d{2}))'
     _time_re = r'(?P<hours>\d{2})(:(?P<minutes>\d{2})(:(?P<seconds>\d{2})(.(?P<decimal>\d+))?)?(?P<tzd>%s))?' % _time_zone_re
     _date_re = re.compile(r'(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2})(T(?P<time>%s))?)?)?' % _time_re)
+    # permissive and robust dimension parser
+    #_flash_re = re.compile(r'(?:Fired:)?(?=<Fired>\d+)', flags=re.IGNORECASE) 
 
     def __init__(self, key, value=None, _tag=None):
         """
@@ -266,8 +269,11 @@ class XmpTag(object):
                 raise XmpValueError(value, type)
 
         elif type == 'Colorant':
-            # TODO
-            raise NotImplementedError('XMP conversion for type [%s]' % type)
+            try:
+                return(str(value))
+            except ValueError:
+                # TODO
+                raise NotImplementedError('XMP conversion for type [%s]' % type)
 
         elif type == 'Date':
             match = self._date_re.match(value)
@@ -286,7 +292,10 @@ class XmpTag(object):
                 try:
                     return datetime.date(int(gd['year']), month, day)
                 except ValueError:
-                    raise XmpValueError(value, type)
+                    try:
+                        return dateutil.parser.parse(value)
+                    except ValueError:
+                        raise XmpValueError(value, type)
             else:
                 if gd['minutes'] is None:
                     # Malformed time
@@ -312,8 +321,61 @@ class XmpTag(object):
                     raise XmpValueError(value, type)
 
         elif type == 'Dimensions':
-            # TODO
-            raise NotImplementedError('XMP conversion for type [%s]' % type)
+            try:
+                return Dimensions.from_string(value)
+            except ValueError:
+                try:
+                    return str(value)
+                except ValueError:
+                    raise XmpValueError(value, type)
+
+        # XMP Spec: "exif:Flash Flash Internal EXIF tag 37385, 0x9209. Strobe light (flash) source data.
+        elif type == 'Flash':
+            try:
+                return Flash.from_string(value) #still causes a value error
+            except ValueError:
+                try:
+                    return str(value) # why does this cause Attribute error claiming that Flash type objects have no from_string attribute
+                except ValueError:
+                    raise XmpValueError(value, type)
+#Traceback (most recent call last):
+#  File "/home/hobs/bin/tagim", line 303, in <module>
+#    tagim.display_meta(im)
+#  File "/home/hobs/src/tagim/tg/tagim.py", line 204, in display_meta
+#    print "{0}: {1}".format(k,str(im[k].value))
+#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 216, in _get_value
+#    self._compute_value()
+#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 210, in _compute_value
+#    self._value = self._convert_to_python(self._raw_value, self.type)
+#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 338, in _convert_to_python
+#    return Flash.from_string(value)
+#AttributeError: type object 'Flash' has no attribute 'from_string'
+
+
+#        elif type == 'Dimensions':
+#            # Example from http://partners.adobe.com/public/developer/en/xmp/sdk/XMPspecification.pdf p. 49/112
+#            # w:720, h: 480, unit:pixels
+#            match = self._dimenstions_re.match(value)
+#            if match is None:
+#                raise XmpValueError(value, type)
+#            gd = match.groupdict()
+#            if gd['w'] is not None:
+#                w = int(gd['w'])
+#            else:
+#                w = 1
+#            if gd['h'] is not None:
+#                h = int(gd['h'])
+#            else:
+#                h = 1
+#            if gd['unit'] is not None:
+#                unit = str(gd['unit'])
+#            else:
+#                unit = 'pixels'
+#            return(.find(
+#                try:
+#                    return str(value)
+#                except ValueError:
+#                    raise XmpValueError(value, type)
 
         elif type == 'Font':
             # TODO

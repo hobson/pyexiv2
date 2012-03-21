@@ -121,7 +121,7 @@ class FixedOffset(datetime.tzinfo):
         else:
             return '%s%02d:%02d' % (self.sign, self.hours, self.minutes)
 
-    def __equal__(self, other):
+    def __eq__(self, other):
         """
         Test equality between this offset and another offset.
 
@@ -520,6 +520,207 @@ class NotifyingList(list):
         super(NotifyingList, self).__delslice__(i, j)
         if deleted:
             self._notify_listeners()
+
+# TODO:
+# The XMP struct type tags (Flash, Dimension, Colorant, etc) need objects
+#   to encapsulate them, implementing container methods like get, set, repr(),
+#   like datetime or utils.GPSCoordinate.
+#   Unlike other data type classes, might be good to also implement dict() and/or
+#   iterator interfaces
+# These data type objects should be defined in utils, where GPSCoordinate is located
+# docs.python.org uses this pattern:
+#class C(object):
+#    def __init__(self):
+#        self._x = None
+#    def getx(self):
+#        return self._x
+#    def setx(self, value):
+#        self._x = value
+#    def delx(self):
+#        del self._x
+#    x = property(getx, setx, delx, "I'm the 'x' property.")
+
+class Dimensions(object):
+    """
+    An XMP Dimensions data type.
+
+    Properties:
+    - width: image width ('w' in XMP Spec)
+    - height: image height ('h' in XMP Spec)
+    - unit: units of measure for the image dimensions
+    """
+    # would be more robust if order of fields didn't matter
+    _format_re = re.compile(
+                            r'w\w*:(?P<w>\d+)'
+                            r',\s*h\w*:(?P<h>\d+)'
+                            r'(?:,\s*unit\w?:(?P<unit>\d+))?',
+                            flags=re.IGNORECASE) 
+    def __init__(self, width=1, height=1, unit='pixels'):
+        """
+        :param width: image width
+        :type width: int
+        :param width: image height
+        :type width: int
+        :param unit: units of measure for image dimensions
+        :type unit: str
+        :raise ValueError: if any of the parameter is not in the expected range
+                           of values
+        """
+        self._width = width
+        self._height = height
+        self._unit = unit
+
+    # Makes Dimensions.width read-only, unless @width.setter decorates setter method
+    @property  
+    def width(self):
+        """The width of the image."""
+        # xmp.py and exif.py use the getter/setter, utils.py doesn't
+        # return self._getWidth() 
+        return self._width
+    @property
+    def height(self):
+        """The height of the image."""
+        # return self._getHeight()
+        return self._height
+    @property
+    def unit(self):
+        """
+        The units used to indicate width and height.
+        Examples: inch, mm, pixel, pixels, pica, point
+        """
+        # return self._getUnit()
+        return self._unit
+    @staticmethod
+    def from_string(string):
+        """
+        Instantiate a :class:`Dimensions` from a string formatted as
+        ``w:<int>, h:<int>, unit:<str>`` or ``<int>, <int>, <str>``.
+        :param string: a string representation of a XMP Dimensions data type
+        :type string: string
+        :return: the XMP Dimensions data type parsed
+        :rtype: :class:`Dimensions`
+        :raise ValueError: if the format of the string is invalid
+        """
+        match = Dimensions._format_re.match(string)
+        if match is None:
+            raise ValueError('Invalid format for image Dimensions: %s' % string)
+        gd = match.groupdict()
+        return GPSCoordinate(int(gd['width']), int(gd['height']), gd['unit'])
+    def __eq__(self, other):
+        """
+        Compare two XMP image Dimensions for equality.
+        Two Dimensions are equal if all their components are equal.
+        :param other: the XMP image Dimensions to compare to self for equality
+        :type other: :class:`Dimensions`
+        :return: True if equal, False otherwise
+        :rtype: boolean
+        """
+        return (self._width == other._width) and \
+               (self._height == other._height) and \
+               (self._unit == other._unit) 
+    def __str__(self):
+        """
+        :return: a string representation of the image Dimensions conforming to 
+                 the XMP specification
+        :rtype: string
+        """
+        return 'w:%d, h:%d, unit:%s' % (self._width, self._height, self._unit)
+
+class Flash(object):
+    """
+    An XMP Flash data type.
+    Properties:
+    - fired: whether flash fired
+    - return: whether flash/strobe return is supported or detected (0,2, or 3)
+    - mode: flash/strobe mode (unknown, compulsory, flash off, auto)
+    - function: whether flash function is present
+    - red_eye_mode: whether red-eye reduction is supported
+    """
+    
+    # would be more robust if order of fields didn't matter
+    _format_re = re.compile(r'(?P<fired>\d+)',flags=re.IGNORECASE) 
+    
+    def __init__(self, fired=0, retrn=0, mode=0, function=0, red_eye_mode=0):
+        """
+        :param fired: whether flash fired
+        :type fired: boolean
+        :param return: whether flash/strobe return is supported or detected (0,2, or 3)
+        :type return: int
+        :param mode: flash/strobe mode (unknown, compulsory, flash off, auto)
+        :type mode: int
+        :param function: whether flash function is present
+        :type function: boolean
+        :param red_eye_mode: whether red-eye reduction is supported
+        :type return: boolean
+        :raise ValueError: if any of the parameter is not in the expected range
+                           of values
+        """
+        self._fired = fired
+        self._return = retrn
+        self._more = mode
+        self._function = function
+        self._red_eye_mode = red_eye_mode
+
+    @property  
+    def fired(self):
+        """Whether the flash fired."""
+        # xmp.py and exif.py use the getter/setter, utils.py doesn't
+        # return self._getWidth() 
+        return self._fired
+
+    @property
+    def mode(self):
+        """Flash or strobe mode (0=unknown, 1=compulsory, 2=flash off, 3=auto)."""
+        # return self._getHeight()
+        return self._mode
+
+    @staticmethod
+    def from_string(string):
+        """
+        Instantiate a :class:`Flash` from a string formatted as
+        ``w:<int>, h:<int>, unit:<str>`` or ``<int>, <int>, <str>``.
+        :param string: a string representation of a XMP Flash data type
+        :type string: string
+        :return: the XMP Flash data type parsed
+        :rtype: :class:`Flash`
+        :raise ValueError: if the format of the string is invalid
+        """
+        match = Flash._format_re.match(string)
+        if match is None:
+            raise ValueError('Invalid format for image Flash: %s' % string)
+        gd = match.groupdict()
+        return Flash(int(gd['fired']))
+
+    def __equal__(self, other):
+        """
+        Compare two XMP Flash instances for equality.
+        Two Flash are equal if all their components are equal.
+        :param other: the XMP Flash instances to compare to self for equality
+        :type other: :class:`Flash`
+        :return: True if equal, False otherwise
+        :rtype: boolean
+        """
+        return (self._fired == other._fired) and \
+               (self._mode == other._mode) 
+
+    def __str__(self):
+        """
+        :return: a string representation of the Flash instance conforming to 
+                 the XMP specification
+        :rtype: string
+        """
+        return '%d' % (self._fired)
+
+class Flash(object):
+    """
+    An XMP Flash type.
+    """
+
+class Colorant(object):
+    """
+    An XMP Colorant type.
+    """
+    pass
 
 
 class GPSCoordinate(object):
