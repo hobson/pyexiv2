@@ -93,8 +93,11 @@ class XmpTag(object):
     _time_zone_re = r'Z|((?P<sign>\+|-)(?P<ohours>\d{2}):(?P<ominutes>\d{2}))'
     _time_re = r'(?P<hours>\d{2})(:(?P<minutes>\d{2})(:(?P<seconds>\d{2})(.(?P<decimal>\d+))?)?(?P<tzd>%s))?' % _time_zone_re
     _date_re = re.compile(r'(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2})(T(?P<time>%s))?)?)?' % _time_re)
+    _xmp_type_re =  re.compile(r'(?:closed|open)?\s?choice(?:of)?\s(?P<type>\w+)', re.IGNORECASE)
     # permissive and robust dimension parser
     #_flash_re = re.compile(r'(?:Fired:)?(?=<Fired>\d+)', flags=re.IGNORECASE) 
+
+
 
     def __init__(self, key, value=None, _tag=None):
         """
@@ -135,6 +138,17 @@ class XmpTag(object):
             tag._raw_value = _tag._getLangAltValue()
         tag._value_cookie = True
         return tag
+
+    def _choice_type(self,s):
+        print '!!!!!!!XMPCHOICE!!!!!!!!!!'
+        print s
+        mo = self._xmp_type_re.match(s)
+        print mo
+        if mo:
+            gd = mo.groupdict()
+            if gd and gd['type']:
+                return gd['type']
+        return s
 
     @property
     def key(self):
@@ -177,7 +191,7 @@ class XmpTag(object):
             if not value:
                 raise ValueError('Empty LangAlt')
             self._tag._setLangAltValue(value)
-
+        # what about setting 'type'?
         self._raw_value = value
         self._value_cookie = True
 
@@ -188,9 +202,7 @@ class XmpTag(object):
     def _compute_value(self):
         # Lazy computation of the value from the raw value
         if self.type.startswith(('seq', 'bag', 'alt')):
-            type = self.type[4:]
-            if type.lower().startswith('closed choice of'):
-                type = type[17:]
+            type = self._choice_type(self.type[4:]) # TODO _xmp_type_re (choice_type) could incorporate this as well
             self._value = map(lambda x: self._convert_to_python(x, type), self._raw_value)
         elif self.type == 'Lang Alt':
             self._value = {}
@@ -198,14 +210,12 @@ class XmpTag(object):
                 try:
                     self._value[unicode(k, 'utf-8')] = unicode(v, 'utf-8')
                 except TypeError:
-                    raise XmpValueError(self._raw_value, type)
-        elif self.type.lower().startswith('closed choice of'):
-            self._value = self._convert_to_python(self._raw_value, self.type[17:])
-        elif self.type == '':
-            self._value = self._raw_value
+                    raise XmpValueError(self._raw_value, self.type) # FIXME: type is not yet defined!!!
+        elif self._choice_type(self.type):
+            type = self._choice_type(self.type)
+            self._value = map(lambda x: self._convert_to_python(x, type), self._raw_value)
         else:
             self._value = self._convert_to_python(self._raw_value, self.type)
-
         self._value_cookie = False
 
     def _get_value(self):
@@ -216,16 +226,12 @@ class XmpTag(object):
     def _set_value(self, value):
         type = self._tag._getExiv2Type()
         if type == 'XmpText':
-            stype = self.type
-            if stype.lower().startswith('closed choice of'):
-                stype = stype[17:]
+            stype = self._choice_type(self.type)
             self.raw_value = self._convert_to_string(value, stype)
         elif type in ('XmpAlt', 'XmpBag', 'XmpSeq'):
             if not isinstance(value, (list, tuple)):
                 raise TypeError('Expecting a list of values')
-            stype = self.type[4:]
-            if stype.lower().startswith('closed choice of'):
-                stype = stype[17:]
+            stype = self._choice_type(self.type[4:]) # why create a new variable?
             self.raw_value = map(lambda x: self._convert_to_string(x, stype), value)
         elif type == 'LangAlt':
             if isinstance(value, basestring):
@@ -332,25 +338,12 @@ class XmpTag(object):
         # XMP Spec: "exif:Flash Flash Internal EXIF tag 37385, 0x9209. Strobe light (flash) source data.
         elif type == 'Flash':
             try:
-                return Flash.from_string(value) #still causes a value error
+                return Flash(value) #still causes a value error
             except ValueError:
                 try:
                     return str(value) # why does this cause Attribute error claiming that Flash type objects have no from_string attribute
                 except ValueError:
                     raise XmpValueError(value, type)
-#Traceback (most recent call last):
-#  File "/home/hobs/bin/tagim", line 303, in <module>
-#    tagim.display_meta(im)
-#  File "/home/hobs/src/tagim/tg/tagim.py", line 204, in display_meta
-#    print "{0}: {1}".format(k,str(im[k].value))
-#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 216, in _get_value
-#    self._compute_value()
-#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 210, in _compute_value
-#    self._value = self._convert_to_python(self._raw_value, self.type)
-#  File "/usr/lib/python2.7/dist-packages/pyexiv2/xmp.py", line 338, in _convert_to_python
-#    return Flash.from_string(value)
-#AttributeError: type object 'Flash' has no attribute 'from_string'
-
 
 #        elif type == 'Dimensions':
 #            # Example from http://partners.adobe.com/public/developer/en/xmp/sdk/XMPspecification.pdf p. 49/112
@@ -413,8 +406,7 @@ class XmpTag(object):
                 raise XmpValueError(value, type)
 
         elif type == 'Real':
-            # TODO
-            raise NotImplementedError('XMP conversion for type [%s]' % type)
+            return float(value)
 
         elif type in ('AgentName', 'ProperName', 'Text'):
             try:
@@ -428,6 +420,20 @@ class XmpTag(object):
 
         elif type in ('URI', 'URL'):
             return value
+
+        elif self._choice_type(type):
+            t = self._choice_type(type)
+            if isinstance(t,str) and len(t)>2:
+                if t[0:3]=='Int':
+                    value = int(value)
+                if t[0:3] in ['Str','Tex','Txt']: # Text is the official API spec
+                    value = str(value)
+                if t[0:3] in ['Rea','Flo','Dou']: # 
+                    value = float(value)
+            return value
+
+        elif type == '':
+            return str(value)
 
         elif type == 'XPath':
             # TODO

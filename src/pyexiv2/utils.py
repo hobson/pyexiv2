@@ -241,7 +241,7 @@ class Rational(object):
     Instead, use :func:`make_fraction`.
     """
 
-    _format_re = re.compile(r'(?P<numerator>-?\d+)/(?P<denominator>\d+)')
+    _format_re = re.compile(r'(?P<numerator>-?\d+)(?:/(?P<denominator>\d+))?')
 
     def __init__(self, numerator, denominator):
         """
@@ -368,9 +368,14 @@ def make_fraction(*args):
     """
     if len(args) == 1:
         numerator, denominator = Rational.match_string(args[0])
+        if not denominator:
+            denominator = 1
+        print numerator,denominator
     elif len(args) == 2:
         numerator = args[0]
         denominator = args[1]
+        if not denominator:
+            denominator = 1
     else:
         raise TypeError('Invalid format for a fraction: %s' % str(args))
     if denominator == 0 and numerator == 0:
@@ -590,6 +595,7 @@ class Dimensions(object):
         """
         # return self._getUnit()
         return self._unit
+        
     @staticmethod
     def from_string(string):
         """
@@ -605,7 +611,8 @@ class Dimensions(object):
         if match is None:
             raise ValueError('Invalid format for image Dimensions: %s' % string)
         gd = match.groupdict()
-        return GPSCoordinate(int(gd['width']), int(gd['height']), gd['unit'])
+        return Dimensions(int(gd['width']), int(gd['height']), gd['unit'])
+        
     def __eq__(self, other):
         """
         Compare two XMP image Dimensions for equality.
@@ -655,9 +662,13 @@ class Flash(object):
         :raise ValueError: if any of the parameter is not in the expected range
                            of values
         """
+#        #TODO: DRY this by using static method Flash.from_string(fired) here
+#        if isinstance(fired,str):
+#            self._fired = int(fired)
+#        else:
         self._fired = fired
         self._return = retrn
-        self._more = mode
+        self._mode = mode
         self._function = function
         self._red_eye_mode = red_eye_mode
 
@@ -675,23 +686,24 @@ class Flash(object):
         return self._mode
 
     @staticmethod
-    def from_string(string):
+    def from_string(s):
         """
         Instantiate a :class:`Flash` from a string formatted as
-        ``w:<int>, h:<int>, unit:<str>`` or ``<int>, <int>, <str>``.
+        ``<int>``.
         :param string: a string representation of a XMP Flash data type
         :type string: string
         :return: the XMP Flash data type parsed
         :rtype: :class:`Flash`
         :raise ValueError: if the format of the string is invalid
         """
-        match = Flash._format_re.match(string)
+        match = Flash._format_re.match(s)
         if match is None:
-            raise ValueError('Invalid format for image Flash: %s' % string)
+            raise ValueError('Invalid format for image Flash: %s' % s)
         gd = match.groupdict()
-        return Flash(int(gd['fired']))
+        print gd
+        return Flash( int(gd['fired']) )
 
-    def __equal__(self, other):
+    def __eq__(self, other):
         """
         Compare two XMP Flash instances for equality.
         Two Flash are equal if all their components are equal.
@@ -709,12 +721,8 @@ class Flash(object):
                  the XMP specification
         :rtype: string
         """
-        return '%d' % (self._fired)
-
-class Flash(object):
-    """
-    An XMP Flash type.
-    """
+        print 'fired = "'+str(self._fired)+'"'
+        return str((self._fired))+str((self._mode))
 
 class Colorant(object):
     """
@@ -839,7 +847,6 @@ class GPSCoordinate(object):
         """
         return '%d,%d,%d%s' % (self._degrees, self._minutes, self._seconds,
                                self._direction)
-
 
 class DateTimeFormatter(object):
 
