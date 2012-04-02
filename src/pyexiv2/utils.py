@@ -370,7 +370,7 @@ def make_fraction(*args):
         numerator, denominator = Rational.match_string(args[0])
         if not denominator:
             denominator = 1
-        print numerator,denominator
+        # print numerator,denominator
     elif len(args) == 2:
         numerator = args[0]
         denominator = args[1]
