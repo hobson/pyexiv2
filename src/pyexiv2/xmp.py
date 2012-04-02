@@ -93,7 +93,7 @@ class XmpTag(object):
     _time_zone_re = r'Z|((?P<sign>\+|-)(?P<ohours>\d{2}):(?P<ominutes>\d{2}))'
     _time_re = r'(?P<hours>\d{2})(:(?P<minutes>\d{2})(:(?P<seconds>\d{2})(.(?P<decimal>\d+))?)?(?P<tzd>%s))?' % _time_zone_re
     _date_re = re.compile(r'(?P<year>\d{4})(-(?P<month>\d{2})(-(?P<day>\d{2})(T(?P<time>%s))?)?)?' % _time_re)
-    _xmp_type_re =  re.compile(r'(?:closed|open)?\s?choice(?:of)?\s(?P<type>\w+)', re.IGNORECASE)
+    _xmp_type_re =  re.compile(r'(?:closed|open)?\s*choice\s*(?:of)?\s*(?P<type>\w+)', re.IGNORECASE)
     # permissive and robust dimension parser
     #_flash_re = re.compile(r'(?:Fired:)?(?=<Fired>\d+)', flags=re.IGNORECASE) 
 
@@ -140,15 +140,17 @@ class XmpTag(object):
         return tag
 
     def _choice_type(self,s):
-        print '!!!!!!!XMPCHOICE!!!!!!!!!!'
-        print s
         mo = self._xmp_type_re.match(s)
-        print mo
         if mo:
             gd = mo.groupdict()
             if gd and gd['type']:
                 return gd['type']
-        return s
+        # Canon EOS 450D, post-processed with Microsoft Windows Photo Gallery, 
+        #   '/media/Win7/Users/Hobs/Documents/Photos/2011_01_20 Kina River/IMG_5037.JPG'
+        # had XMP choice tags that called this function with s='of', 'AgentName', '', 'URI',...
+        # all of which failed to produce a match object above
+        # print 'Unrecognized XMP Choice: "'+str(s)+'"'
+        return None # don't try to return s, because it will produce weird results
 
     @property
     def key(self):
@@ -409,10 +411,15 @@ class XmpTag(object):
             return float(value)
 
         elif type in ('AgentName', 'ProperName', 'Text'):
+            #print 'Found an AgentName-like tag: "'+str(value)+'" of type "'+str(type)+'"'
             try:
                 return unicode(value, 'utf-8')
             except TypeError:
-                raise XmpValueError(value, type)
+                # TODO: this seems not to do much (if you can't unicode() a value, why should you ever be able to str() it ?!)
+                try:
+                    return str(value)
+                except TypeError:
+                    raise XmpValueError(value, type)
 
         elif type == 'Thumbnail':
             # TODO
