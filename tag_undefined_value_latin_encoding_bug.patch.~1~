@@ -1,0 +1,78 @@
+=== modified file 'src/pyexiv2/exif.py'
+--- src/pyexiv2/exif.py	2011-08-12 06:29:47 +0000
++++ src/pyexiv2/exif.py	2012-02-28 22:50:00 +0000
+@@ -33,6 +33,7 @@
+ from pyexiv2.utils import is_fraction, make_fraction, fraction_to_string, \
+                           NotifyingList, ListenerInterface, \
+                           undefined_to_string, string_to_undefined, \
++                          latin_to_ascii, escape_unprintable, \
+                           DateTimeFormatter
+ 
+ import time
+@@ -286,6 +287,10 @@
+             # There is currently no charset conversion.
+             # TODO: guess the encoding and decode accordingly into unicode
+             # where relevant.
++            try:
++                return value.decode('utf-8')
++            except UnicodeError:
++                return value
+             return value
+ 
+         elif self.type in ('Byte', 'SByte'):
+@@ -330,7 +335,7 @@
+             # There is currently no charset conversion.
+             # TODO: guess the encoding and decode accordingly into unicode
+             # where relevant.
+-            return undefined_to_string(value)
++            return escape_unprintable(undefined_to_string(latin_to_ascii(value)))
+ 
+         raise ExifValueError(value, self.type)
+ 
+
+=== modified file 'src/pyexiv2/utils.py'
+--- src/pyexiv2/utils.py	2011-10-24 07:35:44 +0000
++++ src/pyexiv2/utils.py	2012-02-28 22:51:40 +0000
+@@ -133,6 +133,30 @@
+         return (self.sign == other.sign) and (self.hours == other.hours) and \
+             (self.minutes == other.minutes)
+ 
++def latin_to_ascii(s):
++    s2=''
++    for c in s:
++        if ord(c) < 128:
++            s2 += c
++        else:
++            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
++    return s2
++
++PRINTABLE = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~ \t\n\r\x0b\x0c'
++def escape_unprintable(s):
++    s2=''
++    for c in s:
++        if ord(c) < 128 and c in PRINTABLE:
++            s2 += c
++        else:
++            s2 += '\\x'+hex(ord(c))[2:].zfill(2) 
++    return s2
++
++def tryint(s):
++    try:
++        return int(s)
++    except ValueError:
++        return False # return 0
+ 
+ def undefined_to_string(undefined):
+     """
+@@ -148,8 +172,7 @@
+     :return: the corresponding decoded string
+     :rtype: string
+     """
+-    return ''.join(map(lambda x: chr(int(x)), undefined.rstrip().split(' ')))
+-
++    return ''.join(map(lambda x: chr(tryint(x)), undefined.strip().split(' ')))
+ 
+ def string_to_undefined(sequence):
+     """
+
+

@@ -1,0 +1,10 @@
+.sconsign.dblite
+build
+doc/_build/*
+malformed_exif_examples
+malformed_makernote_bug.patch
+Bug959908_utils_and_exif.patch
+Bug959908_utils_incorporated_into_exif.patch
+Bug959908_utils_only.patch
+Bug959908_utils_undefined_to_human.patch
+tag_undefined_value_latin_encoding_bug.patch
